@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
 using Dalamud.Plugin.Services;
 using ImSharp;
 using Penumbra.GameData.Data;
@@ -25,37 +26,37 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     /// <summary> Create an ImGui Tooltip for user strings. </summary>
     public static void WriteUserStringTooltip(bool withIndex)
     {
-        using var tt   = Im.Tooltip.Begin();
+        using var tt = Im.Tooltip.Begin();
         using var font = Im.Font.PushMono();
         Im.Text("Valid formats for an Identifier String are:"u8);
 
-        const uint typeColor    = 0xFF40FF40;
-        const uint nameColor    = 0xFF00D0D0;
-        const uint keyColor     = 0xFFFFD060;
+        const uint typeColor = 0xFF40FF40;
+        const uint nameColor = 0xFF00D0D0;
+        const uint keyColor = 0xFFFFD060;
         const uint npcTypeColor = 0xFFFF40FF;
         const uint npcNameColor = 0xFF4040FF;
-        const uint indexColor   = 0xFFA0A0A0;
+        const uint indexColor = 0xFFA0A0A0;
 
         Im.Bullet();
         Im.Line.Same();
         ImEx.TextMultiColored("P"u8, typeColor)
-            .Then(" | "u8,                        keyColor)
+            .Then(" | "u8, keyColor)
             .Then("[Player Name]@<World Name>"u8, nameColor)
             .End();
 
         Im.Bullet();
         Im.Line.Same();
         ImEx.TextMultiColored("R"u8, typeColor)
-            .Then(" | "u8,             keyColor)
+            .Then(" | "u8, keyColor)
             .Then("[Retainer Name]"u8, nameColor)
             .End();
 
         Im.Bullet();
         Im.Line.Same();
         var text = ImEx.TextMultiColored("N"u8, typeColor)
-            .Then(" | "u8,        keyColor)
+            .Then(" | "u8, keyColor)
             .Then("[NPC Type]"u8, npcTypeColor)
-            .Then(" : "u8,        keyColor)
+            .Then(" : "u8, keyColor)
             .Then("[Npc Name]"u8, npcNameColor);
 
         if (withIndex)
@@ -75,11 +76,11 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         Im.Bullet();
         Im.Line.Same();
         ImEx.TextMultiColored("O"u8, typeColor)
-            .Then(" | "u8,                        keyColor)
-            .Then("[NPC Type]"u8,                 npcTypeColor)
-            .Then(" : "u8,                        keyColor)
-            .Then("[Npc Name]"u8,                 npcNameColor)
-            .Then(" | "u8,                        keyColor)
+            .Then(" | "u8, keyColor)
+            .Then("[NPC Type]"u8, npcTypeColor)
+            .Then(" : "u8, keyColor)
+            .Then("[Npc Name]"u8, npcNameColor)
+            .Then(" | "u8, keyColor)
             .Then("[Player Name]@<World Name>"u8, nameColor)
             .End();
 
@@ -146,19 +147,6 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     }
 
     /// <summary> Convert a string into a list of ActorIdentifiers. </summary>
-    /// <param name="userString"> The input string. </param>
-    /// <param name="allowIndex"> Whether the conversion allows and respects game object indices. </param>
-    /// <returns> All matching actor identifiers. </returns>
-    /// <exception cref="IdentifierParseError"> Any failure to convert throws an exception with the failure reason. </exception>
-    /// <remarks>
-    /// Valid formats are:
-    /// <list type="bullet">
-    ///     <item><code>p|[Player Name]@{World Name}</code> players of name from world, world is optional</item>
-    ///     <item><code>r|[Retainer Name]</code> retainers</item>
-    ///     <item><code>n|[NPC Type]:[NPC Name]@{Object Index}</code> NPCs of type MCAEB and a given name, at an optional index which may be disallowed.</item>
-    ///     <item><code>o|[NPC Type]:[NPC Name]|[Player Name]@{World Name}</code> Owned NPCs.</item>
-    /// </list>
-    /// </remarks>
     public ActorIdentifier[] FromUserString(string userString, bool allowIndex)
     {
         if (userString.Length == 0)
@@ -172,50 +160,44 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         {
             case "p":
             case "player":
-            {
-                var (playerName, worldId) = ParsePlayer(split[1]);
-                return [CreateIndividualUnchecked(IdentifierType.Player, playerName, worldId.Id, 0, 0)];
-            }
+                {
+                    var (playerName, worldId) = ParsePlayer(split[1]);
+                    return [CreateIndividualUnchecked(IdentifierType.Player, playerName, worldId.Id, 0, 0)];
+                }
             case "r":
             case "retainer":
-            {
-                if (!VerifyRetainerName(split[1]))
-                    throw new IdentifierParseError($"{split[1]} is not a valid player name.");
-                if (!ByteString.FromString(split[1], out var playerName))
-                    throw new IdentifierParseError($"The retainer string {split[1]} contains invalid symbols.");
+                {
+                    if (!VerifyRetainerName(split[1]))
+                        throw new IdentifierParseError($"{split[1]} is not a valid retainer name.");
+                    if (!ByteString.FromString(split[1], out var playerName))
+                        throw new IdentifierParseError($"The retainer string {split[1]} contains invalid symbols.");
 
-                return [CreateIndividualUnchecked(IdentifierType.Retainer, playerName, 0, 0, 0)];
-            }
+                    return [CreateIndividualUnchecked(IdentifierType.Retainer, playerName, 0, 0, 0)];
+                }
             case "n":
             case "npc":
-            {
-                var (kind, objectIds, worldId) = ParseNpc(split[1], allowIndex);
-                return objectIds.Select(i => CreateIndividualUnchecked(IdentifierType.Npc, ByteString.Empty, worldId.Id, kind, i)).ToArray();
-            }
+                {
+                    var (kind, objectIds, worldId) = ParseNpc(split[1], allowIndex);
+                    return objectIds.Select(i => CreateIndividualUnchecked(IdentifierType.Npc, ByteString.Empty, worldId.Id, kind, i)).ToArray();
+                }
             case "o":
             case "owned":
-            {
-                if (split.Length < 3)
-                    throw new IdentifierParseError(
-                        "Owned NPCs need a NPC and a player, separated by '|', but only one was provided.");
+                {
+                    if (split.Length < 3)
+                        throw new IdentifierParseError(
+                            "Owned NPCs need a NPC and a player, separated by '|', but only one was provided.");
 
-                var (kind, objectIds, _)  = ParseNpc(split[1], allowIndex);
-                var (playerName, worldId) = ParsePlayer(split[2]);
-                return objectIds.Select(i => CreateIndividualUnchecked(IdentifierType.Owned, playerName, worldId.Id, kind, i)).ToArray();
-            }
+                    var (kind, objectIds, _) = ParseNpc(split[1], allowIndex);
+                    var (playerName, worldId) = ParsePlayer(split[2]);
+                    return objectIds.Select(i => CreateIndividualUnchecked(IdentifierType.Owned, playerName, worldId.Id, kind, i)).ToArray();
+                }
             default:
                 throw new IdentifierParseError(
-                    $"{split[0]} is not a valid identifier type. Valid types are [P]layer, [R]etainer, [N]PC, or [O]wned");
+                     $"{split[0]} is not a valid identifier type. Valid types are [P]layer, [R]etainer, [N]PC, or [O]wned");
         }
     }
 
     /// <summary> Compute an ActorIdentifier from a GameObject. </summary>
-    /// <param name="actor"> The game object. Can be null. </param>
-    /// <param name="owner"> A returned owner if the game object has an owner. </param>
-    /// <param name="allowPlayerNpc"> Allow to treat npcs as players in certain cases for Anamnesis compatibility.</param>
-    /// <param name="check"> Check obtained data for validity. </param>
-    /// <param name="withoutIndex"> Skip the game object index for unowned NPCs. </param>
-    /// <returns> An actor identifier for that object. </returns>
     public unsafe ActorIdentifier FromObject(Actor actor, out Actor owner, bool allowPlayerNpc, bool check, bool withoutIndex)
     {
         owner = Actor.Null;
@@ -230,14 +212,14 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         var kind = (ObjectKind)actor.AsObject->ObjectKind;
         return kind switch
         {
-            ObjectKind.Player    => CreatePlayerFromObject(actor, check),
+            ObjectKind.Player => CreatePlayerFromObject(actor, check),
             ObjectKind.BattleNpc => CreateBNpcFromObject(actor, out owner, check, allowPlayerNpc, withoutIndex),
-            ObjectKind.EventNpc  => CreateENpcFromObject(actor, check, withoutIndex),
+            ObjectKind.EventNpc => CreateENpcFromObject(actor, check, withoutIndex),
             ObjectKind.MountType => CreateCompanionFromObject(actor, out owner, kind, check),
             ObjectKind.Companion => CreateCompanionFromObject(actor, out owner, kind, check),
-            ObjectKind.Ornament  => CreateCompanionFromObject(actor, out owner, kind, check),
-            ObjectKind.Retainer  => CreateRetainerFromObject(actor, check),
-            _                    => CreateUnkFromObject(actor, withoutIndex),
+            ObjectKind.Ornament => CreateCompanionFromObject(actor, out owner, kind, check),
+            ObjectKind.Retainer => CreateRetainerFromObject(actor, check),
+            _ => CreateUnkFromObject(actor, withoutIndex),
         };
     }
 
@@ -252,27 +234,19 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         => FromObject(actor, out _, allowPlayerNpc, check, withoutIndex);
 
     /// <summary> Create an individual from existing data, which is checked for correctness. </summary>
-    /// <param name="type"> The type of actor. </param>
-    /// <param name="name"> The name of the actor for players, retainers and owned objects. </param>
-    /// <param name="value"> WorldId, ScreenActor, ObjectIndex or RetainerType. </param>
-    /// <param name="kind"> The object kind for NPCs. </param>
-    /// <param name="dataId"> The data id for NPCs. </param>
-    /// <returns> An identifier for that data. </returns>
     public ActorIdentifier CreateIndividual(IdentifierType type, ByteString name, ushort value, ObjectKind kind, NpcId dataId)
         => type switch
         {
-            IdentifierType.Player    => CreatePlayer(name, value),
-            IdentifierType.Retainer  => CreateRetainer(name, (ActorIdentifier.RetainerType)value),
-            IdentifierType.Owned     => CreateOwned(name, value, kind, dataId),
-            IdentifierType.Special   => CreateSpecial((ScreenActor)value),
-            IdentifierType.Npc       => CreateNpc(kind, dataId, value),
+            IdentifierType.Player => CreatePlayer(name, value),
+            IdentifierType.Retainer => CreateRetainer(name, (ActorIdentifier.RetainerType)value),
+            IdentifierType.Owned => CreateOwned(name, value, kind, dataId),
+            IdentifierType.Special => CreateSpecial((ScreenActor)value),
+            IdentifierType.Npc => CreateNpc(kind, dataId, value),
             IdentifierType.UnkObject => CreateIndividualUnchecked(IdentifierType.UnkObject, name, value, ObjectKind.None, 0),
-            _                        => ActorIdentifier.Invalid,
+            _ => ActorIdentifier.Invalid,
         };
 
     /// <inheritdoc cref="CreateIndividual"/>
-    /// <summary> Create an individual from existing data, which is left unchecked. </summary>
-    /// <remarks> Only use this if you are sure the data is valid. </remarks>
     public ActorIdentifier CreateIndividualUnchecked(IdentifierType type, ByteString name, ushort value, ObjectKind kind, NpcId dataId)
         => new(type, kind, (ObjectIndex)value, dataId, name);
 
@@ -330,102 +304,31 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyPlayerName(ReadOnlySpan<byte> name)
     {
-        // Total no more than 20 characters + space.
-        if (name.Length is < 5 or > 21)
-            return false;
-
-        // Forename and surname, no more spaces.
-        var splitIndex = name.IndexOf((byte)' ');
-        if (splitIndex < 0 || name[(splitIndex + 1)..].IndexOf((byte)' ') >= 0)
-            return false;
-
-        return CheckNamePart(name[..splitIndex], 2, 15) && CheckNamePart(name[(splitIndex + 1)..], 2, 15);
+        // Remove the search restrictions.
+        return name.Length > 0;
     }
 
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyPlayerName(ReadOnlySpan<char> name)
     {
-        // Total no more than 20 characters + space.
-        if (name.Length is < 5 or > 21)
-            return false;
-
-        // Forename and surname, no more spaces.
-        var splitIndex = name.IndexOf(' ');
-        if (splitIndex < 0 || name[(splitIndex + 1)..].IndexOf(' ') >= 0)
-            return false;
-
-        return CheckNamePart(name[..splitIndex], 2, 15) && CheckNamePart(name[(splitIndex + 1)..], 2, 15);
+        return name.Length > 0;
     }
 
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyRetainerName(ReadOnlySpan<byte> name)
-        => CheckNamePart(name, 3, 20);
+        => name.Length > 0;
 
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyRetainerName(ReadOnlySpan<char> name)
-        => CheckNamePart(name, 3, 20);
+        => name.Length > 0;
 
     /// <summary> Checks a single part of a name. </summary>
     private static bool CheckNamePart(ReadOnlySpan<char> part, int minLength, int maxLength)
-    {
-        // Each name part at least 2 and at most 15 characters for players, and at least 3 and at most 20 characters for retainers.
-        if (part.Length < minLength || part.Length > maxLength)
-            return false;
-
-        // Each part starting with capitalized letter.
-        if (part[0] is < 'A' or > 'Z')
-            return false;
-
-        // Every other symbol needs to be lowercase letter, hyphen or apostrophe.
-        var last = '\0';
-        for (var i = 1; i < part.Length; ++i)
-        {
-            var current = part[i];
-            if (current is not ('\'' or '-' or >= 'a' and <= 'z'))
-                return false;
-
-            // Hyphens can not be used in succession, after or before apostrophes or as the last symbol.
-            if (last is '\'' && current is '-')
-                return false;
-            if (last is '-' && current is '-' or '\'')
-                return false;
-
-            last = current;
-        }
-
-        return true;
-    }
+        => true;
 
     /// <summary> Checks a single part of a name. </summary>
     private static bool CheckNamePart(ReadOnlySpan<byte> part, int minLength, int maxLength)
-    {
-        // Each name part at least 2 and at most 15 characters for players, and at least 3 and at most 20 characters for retainers.
-        if (part.Length < minLength || part.Length > maxLength)
-            return false;
-
-        // Each part starting with capitalized letter.
-        if (part[0] is < (byte)'A' or > (byte)'Z')
-            return false;
-
-        // Every other symbol needs to be lowercase letter, hyphen or apostrophe.
-        var last = (byte)'\0';
-        for (var i = 1; i < part.Length; ++i)
-        {
-            var current = part[i];
-            if (current is not ((byte)'\'' or (byte)'-' or >= (byte)'a' and <= (byte)'z'))
-                return false;
-
-            // Hyphens can not be used in succession, after or before apostrophes or as the last symbol.
-            if (last is (byte)'\'' && current is (byte)'-')
-                return false;
-            if (last is (byte)'-' && current is (byte)'-' or (byte)'\'')
-                return false;
-
-            last = current;
-        }
-
-        return true;
-    }
+        => true;
 
     /// <summary> Checks if the world is a valid public world or ushort.MaxValue (any world). </summary>
     public bool VerifyWorld(WorldId worldId)
@@ -455,9 +358,9 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         {
             ObjectKind.MountType => data.Mounts.ContainsKey(dataId.Id),
             ObjectKind.Companion => data.Companions.ContainsKey(dataId.Id),
-            ObjectKind.Ornament  => data.Ornaments.ContainsKey(dataId.Id),
+            ObjectKind.Ornament => data.Ornaments.ContainsKey(dataId.Id),
             ObjectKind.BattleNpc => data.BNpcs.ContainsKey(dataId.Id),
-            _                    => false,
+            _ => false,
         };
     }
 
@@ -467,10 +370,10 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         {
             ObjectKind.MountType => data.Mounts.ContainsKey(dataId.Id),
             ObjectKind.Companion => data.Companions.ContainsKey(dataId.Id),
-            ObjectKind.Ornament  => data.Ornaments.ContainsKey(dataId.Id),
+            ObjectKind.Ornament => data.Ornaments.ContainsKey(dataId.Id),
             ObjectKind.BattleNpc => data.BNpcs.ContainsKey(dataId.Id),
-            ObjectKind.EventNpc  => data.ENpcs.ContainsKey(dataId.Id),
-            _                    => false,
+            ObjectKind.EventNpc => data.ENpcs.ContainsKey(dataId.Id),
+            _ => false,
         };
 
     #endregion
@@ -481,7 +384,7 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private ActorIdentifier CreatePlayerFromObject(Actor actor, bool check)
     {
-        var name      = actor.Utf8Name;
+        var name = actor.Utf8Name;
         var homeWorld = actor.HomeWorld;
         return check
             ? CreatePlayer(name, homeWorld)
@@ -502,7 +405,7 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
             if (!owner.Valid)
                 return ActorIdentifier.Invalid;
 
-            var name      = owner.Utf8Name;
+            var name = owner.Utf8Name;
             var homeWorld = owner.HomeWorld;
             return check
                 ? CreateOwned(name, homeWorld, ObjectKind.BattleNpc, nameId)
@@ -540,13 +443,13 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         if (MannequinIds.Contains(dataId))
         {
             var retainerName = new ByteString(actor.AsObject->Name);
-            var actualName   = framework.IsInFrameworkUpdateThread ? new ByteString(actor.AsObject->GetName()) : ByteString.Empty;
+            var actualName = framework.IsInFrameworkUpdateThread ? new ByteString(actor.AsObject->GetName()) : ByteString.Empty;
             if (!actualName.Equals(retainerName))
             {
                 var ident = check
                     ? CreateRetainer(retainerName, ActorIdentifier.RetainerType.Mannequin)
                     : CreateIndividualUnchecked(IdentifierType.Retainer, retainerName, (ushort)ActorIdentifier.RetainerType.Mannequin,
-                        ObjectKind.EventNpc,                             dataId);
+                        ObjectKind.EventNpc, dataId);
                 if (ident.IsValid)
                     return ident;
             }
@@ -566,8 +469,8 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         if (!owner.Valid)
             return ActorIdentifier.Invalid;
 
-        var dataId    = GetCompanionId(actor, owner);
-        var name      = owner.Utf8Name;
+        var dataId = GetCompanionId(actor, owner);
+        var name = owner.Utf8Name;
         var homeWorld = owner.HomeWorld;
         if (check)
             return CreateOwned(name, homeWorld, kind, dataId);
@@ -593,7 +496,7 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private ActorIdentifier CreateUnkFromObject(Actor actor, bool withoutIndex)
     {
-        var name  = actor.Utf8Name;
+        var name = actor.Utf8Name;
         var index = withoutIndex ? ObjectIndex.AnyIndex : actor.Index;
         return CreateIndividualUnchecked(IdentifierType.UnkObject, name, index.Index, ObjectKind.None, 0);
     }
@@ -607,9 +510,9 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
         return (ObjectKind)actor.AsObject->ObjectKind switch
         {
             ObjectKind.MountType => owner.AsCharacter->Mount.MountId,
-            ObjectKind.Ornament  => owner.AsCharacter->OrnamentData.OrnamentId,
+            ObjectKind.Ornament => owner.AsCharacter->OrnamentData.OrnamentId,
             ObjectKind.Companion => actor.AsObject->BaseId,
-            _                    => actor.AsObject->BaseId,
+            _ => actor.AsObject->BaseId,
         };
     }
 
@@ -623,7 +526,7 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
             return main;
 
         var parentIdx = toParentIdx.Invoke(main.Index.Index);
-        var parent    = objects[parentIdx];
+        var parent = objects[parentIdx];
         return parent.Valid ? parent : main;
     }
 
@@ -670,7 +573,7 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     private (ObjectKind, NpcId[], WorldId) ParseNpc(string npc, bool allowIndex)
     {
         var indexString = allowIndex ? "@<Index>" : string.Empty;
-        var split2      = npc.Split(':', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var split2 = npc.Split(':', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (split2.Length != 2)
             throw new IdentifierParseError($"NPCs need to be specified by '[Object Type]:[NPC Name]{indexString}'.");
 
