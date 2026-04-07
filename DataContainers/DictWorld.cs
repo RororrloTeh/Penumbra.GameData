@@ -33,8 +33,8 @@ public sealed class DictWorld(IDalamudPluginInterface pluginInterface, LunaLogge
             return false;
 
         // KR world only
-        if (world.RowId is >= 2070 and <= 2100 && world.Region is 3)
-            return true;
+        if (world.RowId is >= 2075 and <= 2080 && world.Region is 3)
+     return true;
 
         return false;
     }
