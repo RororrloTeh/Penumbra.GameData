@@ -32,10 +32,11 @@ public sealed class DictWorld(IDalamudPluginInterface pluginInterface, LunaLogge
         if (world.DataCenter.RowId is 0)
             return false;
 
-        if (world.IsPublic)
-            return true;
+        // KR world only
+        if (world.RowId is >= 2075 and <= 2080 && world.Region is 3)
+     return true;
 
-        return char.IsUpper((char)world.Name.Data.Span[0]);
+        return false;
     }
 
     /// <inheritdoc/>
