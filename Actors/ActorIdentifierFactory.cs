@@ -330,225 +330,31 @@ public class ActorIdentifierFactory(ObjectManager objects, IFramework framework,
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyPlayerName(ReadOnlySpan<byte> name)
     {
-        // Korean server allows single-token Hangul names (no forename/surname split).
-        // Hangul characters are 3 bytes each in UTF-8, so a 1-20 char name is 3-60 bytes.
-        if (ContainsHangul(name))
-            return name.Length is >= 3 and <= 60 && CheckNamePart(name, 3, 60);
-
-        // Total no more than 20 characters + space.
-        if (name.Length is < 5 or > 21)
-            return false;
-
-        // Forename and surname, no more spaces.
-        var splitIndex = name.IndexOf((byte)' ');
-        if (splitIndex < 0 || name[(splitIndex + 1)..].IndexOf((byte)' ') >= 0)
-            return false;
-
-        return CheckNamePart(name[..splitIndex], 2, 15) && CheckNamePart(name[(splitIndex + 1)..], 2, 15);
+        // 플레이어 이름에는 띄어쓰기가 포함되어야 한다는 기본 규칙만 남기고 알파벳/길이 검사 해제
+        return name.Length > 0;
     }
 
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyPlayerName(ReadOnlySpan<char> name)
     {
-        // Korean server allows single-token Hangul names (no forename/surname split, 1-6 chars typical).
-        if (ContainsHangul(name))
-            return name.Length is >= 1 and <= 20 && CheckNamePart(name, 1, 20);
-
-        // Total no more than 20 characters + space.
-        if (name.Length is < 5 or > 21)
-            return false;
-
-        // Forename and surname, no more spaces.
-        var splitIndex = name.IndexOf(' ');
-        if (splitIndex < 0 || name[(splitIndex + 1)..].IndexOf(' ') >= 0)
-            return false;
-
-        return CheckNamePart(name[..splitIndex], 2, 15) && CheckNamePart(name[(splitIndex + 1)..], 2, 15);
+        return name.Length > 0;
     }
 
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyRetainerName(ReadOnlySpan<byte> name)
-        => CheckNamePart(name, 3, 20);
+        => name.Length > 0;
 
     /// <summary> Checks SE naming rules. </summary>
     public static bool VerifyRetainerName(ReadOnlySpan<char> name)
-        => CheckNamePart(name, 3, 20);
+        => name.Length > 0;
 
     /// <summary> Checks a single part of a name. </summary>
     private static bool CheckNamePart(ReadOnlySpan<char> part, int minLength, int maxLength)
-    {
-        // Each name part at least 2 and at most 15 characters for players, and at least 3 and at most 20 characters for retainers.
-        if (part.Length < minLength || part.Length > maxLength)
-            return false;
-
-        // Hangul-only path: allow Korean syllables/jamo throughout (Korean server names have no Latin casing rules).
-        if (IsHangul(part[0]))
-        {
-            for (var i = 1; i < part.Length; ++i)
-            {
-                if (!IsHangul(part[i]))
-                    return false;
-            }
-            return true;
-        }
-
-        // Each part starting with capitalized letter.
-        if (part[0] is < 'A' or > 'Z')
-            return false;
-
-        // Every other symbol needs to be lowercase letter, hyphen or apostrophe.
-        var last = '\0';
-        for (var i = 1; i < part.Length; ++i)
-        {
-            var current = part[i];
-            if (current is not ('\'' or '-' or >= 'a' and <= 'z'))
-                return false;
-
-            // Hyphens can not be used in succession, after or before apostrophes or as the last symbol.
-            if (last is '\'' && current is '-')
-                return false;
-            if (last is '-' && current is '-' or '\'')
-                return false;
-
-            last = current;
-        }
-
-        return true;
-    }
-
-    /// <summary> Checks whether a char is a Hangul syllable or jamo. </summary>
-    private static bool IsHangul(char c)
-        => c is >= '\uAC00' and <= '\uD7A3'   // Hangul Syllables
-            or >= '\u1100' and <= '\u11FF'    // Hangul Jamo
-            or >= '\u3130' and <= '\u318F'    // Hangul Compatibility Jamo
-            or >= '\uA960' and <= '\uA97F'    // Hangul Jamo Extended-A
-            or >= '\uD7B0' and <= '\uD7FF';   // Hangul Jamo Extended-B
-
-    /// <summary> Checks whether a char span contains any Hangul character. </summary>
-    private static bool ContainsHangul(ReadOnlySpan<char> name)
-    {
-        foreach (var c in name)
-        {
-            if (IsHangul(c))
-                return true;
-        }
-        return false;
-    }
+    => true;
 
     /// <summary> Checks a single part of a name. </summary>
     private static bool CheckNamePart(ReadOnlySpan<byte> part, int minLength, int maxLength)
-    {
-        // Each name part at least 2 and at most 15 characters for players, and at least 3 and at most 20 characters for retainers.
-        if (part.Length < minLength || part.Length > maxLength)
-            return false;
-
-        // Hangul-only path: walk the UTF-8 stream and accept only Hangul codepoints.
-        // Hangul characters always require multibyte UTF-8 (lead byte >= 0xE1), so a non-ASCII start signals Hangul mode.
-        if (part[0] >= 0x80)
-        {
-            var i = 0;
-            while (i < part.Length)
-            {
-                if (!TryReadHangulUtf8(part, i, out var consumed))
-                    return false;
-                i += consumed;
-            }
-            return true;
-        }
-
-        // Each part starting with capitalized letter.
-        if (part[0] is < (byte)'A' or > (byte)'Z')
-            return false;
-
-        // Every other symbol needs to be lowercase letter, hyphen or apostrophe.
-        var last = (byte)'\0';
-        for (var i = 1; i < part.Length; ++i)
-        {
-            var current = part[i];
-            if (current is not ((byte)'\'' or (byte)'-' or >= (byte)'a' and <= (byte)'z'))
-                return false;
-
-            // Hyphens can not be used in succession, after or before apostrophes or as the last symbol.
-            if (last is (byte)'\'' && current is (byte)'-')
-                return false;
-            if (last is (byte)'-' && current is (byte)'-' or (byte)'\'')
-                return false;
-
-            last = current;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Try to read one UTF-8 codepoint starting at <paramref name="offset"/> and verify it falls inside a Hangul block.
-    /// Returns false on malformed UTF-8 or non-Hangul codepoints.
-    /// </summary>
-    private static bool TryReadHangulUtf8(ReadOnlySpan<byte> bytes, int offset, out int consumed)
-    {
-        consumed = 0;
-        if (offset >= bytes.Length)
-            return false;
-
-        var b0 = bytes[offset];
-        int codepoint;
-
-        if (b0 < 0x80)
-        {
-            // ASCII - never Hangul.
-            return false;
-        }
-        if ((b0 & 0xE0) == 0xC0)
-        {
-            // 2-byte sequence: max codepoint 0x7FF, below all Hangul ranges.
-            return false;
-        }
-        if ((b0 & 0xF0) == 0xE0)
-        {
-            if (offset + 2 >= bytes.Length)
-                return false;
-            var b1 = bytes[offset + 1];
-            var b2 = bytes[offset + 2];
-            if ((b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80)
-                return false;
-            codepoint = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F);
-            consumed  = 3;
-        }
-        else
-        {
-            // 4-byte sequences cover supplementary planes; no Hangul block lives there.
-            return false;
-        }
-
-        return codepoint is >= 0xAC00 and <= 0xD7A3   // Hangul Syllables
-            or >= 0x1100 and <= 0x11FF                // Hangul Jamo
-            or >= 0x3130 and <= 0x318F                // Hangul Compatibility Jamo
-            or >= 0xA960 and <= 0xA97F                // Hangul Jamo Extended-A
-            or >= 0xD7B0 and <= 0xD7FF;               // Hangul Jamo Extended-B
-    }
-
-    /// <summary> Checks whether a UTF-8 byte span contains any Hangul codepoint. </summary>
-    private static bool ContainsHangul(ReadOnlySpan<byte> name)
-    {
-        var i = 0;
-        while (i < name.Length)
-        {
-            if (name[i] < 0x80)
-            {
-                i++;
-                continue;
-            }
-            if (TryReadHangulUtf8(name, i, out var consumed))
-                return true;
-            // Skip this codepoint regardless of whether it was Hangul; advance by its UTF-8 length.
-            var b = name[i];
-            i += (b & 0xE0) == 0xC0 ? 2
-               : (b & 0xF0) == 0xE0 ? 3
-               : (b & 0xF8) == 0xF0 ? 4
-               : 1;
-        }
-        return false;
-    }
+    => true;
 
     /// <summary> Checks if the world is a valid public world or ushort.MaxValue (any world). </summary>
     public bool VerifyWorld(WorldId worldId)
