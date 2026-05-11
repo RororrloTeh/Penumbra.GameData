@@ -322,7 +322,8 @@ public class GamePathParser(LunaLogger log) : IService
             "ja" => ClientLanguage.Japanese,
             "de" => ClientLanguage.German,
             "fr" => ClientLanguage.French,
-            _    => ClientLanguage.English,
+            "ko" => ClientLanguage.Korean,
+            _    => ClientLanguage.Korean,
         };
         return GameObjectInfo.Icon(fileType, id, hq, hr, language);
     }
