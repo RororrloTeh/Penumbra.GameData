@@ -107,16 +107,16 @@ public sealed class ActorManager : ActorIdentifierFactory, IDisposable, IAsyncSe
                 _                                      => " (Retainer)",
             }}",
             IdentifierType.Owned => id.HomeWorld.Id != _homeWorld
-                ? $"{id.PlayerName} ({Data.ToWorldName(id.HomeWorld)})'s {Data.ToName(id.Kind, id.DataId)}"
-                : $"{id.PlayerName}s {Data.ToName(id.Kind,                                     id.DataId)}",
+                ? $"{id.PlayerName} ({Data.ToWorldName(id.HomeWorld)})의 {Data.ToName(id.Kind, id.DataId)}"
+                : $"{id.PlayerName}의 {Data.ToName(id.Kind,                                     id.DataId)}",
             IdentifierType.Special => ((ScreenActor)id.Index.Index).ToName(),
             IdentifierType.Npc =>
                 id.Index == ushort.MaxValue
                     ? Data.ToName(id.Kind, id.DataId)
-                    : $"{Data.ToName(id.Kind, id.DataId)} at {id.Index}",
+                    : $"{Data.ToName(id.Kind, id.DataId)} {id.Index}",
             IdentifierType.UnkObject => id.PlayerName.IsEmpty
                 ? $"Unknown Object at {id.Index}"
-                : $"{id.PlayerName} at {id.Index}",
+                : $"{id.PlayerName} {id.Index}",
             _ => "Invalid",
         };
     }
@@ -128,7 +128,7 @@ public sealed class ActorManager : ActorIdentifierFactory, IDisposable, IAsyncSe
         {
             IdentifierType.Player    => id.PlayerName.ToString(),
             IdentifierType.Retainer  => id.PlayerName.ToString(),
-            IdentifierType.Owned     => $"{id.PlayerName}s {Data.ToName(id.Kind, id.DataId)}",
+            IdentifierType.Owned     => $"{id.PlayerName}의 {Data.ToName(id.Kind, id.DataId)}",
             IdentifierType.Special   => ((ScreenActor)id.Index.Index).ToName(),
             IdentifierType.Npc       => Data.ToName(id.Kind, id.DataId),
             IdentifierType.UnkObject => id.PlayerName.IsEmpty ? id.PlayerName.ToString() : "Unknown Object",
