@@ -102,9 +102,9 @@ public sealed class ActorManager : ActorIdentifierFactory, IDisposable, IAsyncSe
                 : id.PlayerName.ToString(),
             IdentifierType.Retainer => $"{id.PlayerName}{id.Retainer switch
             {
-                ActorIdentifier.RetainerType.Bell      => " (Bell)",
-                ActorIdentifier.RetainerType.Mannequin => " (Mannequin)",
-                _                                      => " (Retainer)",
+                ActorIdentifier.RetainerType.Bell      => " (집사 초인종)",
+                ActorIdentifier.RetainerType.Mannequin => " (마네킹)",
+                _                                      => " (집사)",
             }}",
             IdentifierType.Owned => id.HomeWorld.Id != _homeWorld
                 ? $"{id.PlayerName} ({Data.ToWorldName(id.HomeWorld)})의 {Data.ToName(id.Kind, id.DataId)}"
@@ -115,9 +115,9 @@ public sealed class ActorManager : ActorIdentifierFactory, IDisposable, IAsyncSe
                     ? Data.ToName(id.Kind, id.DataId)
                     : $"{Data.ToName(id.Kind, id.DataId)} {id.Index}",
             IdentifierType.UnkObject => id.PlayerName.IsEmpty
-                ? $"Unknown Object at {id.Index}"
-                : $"{id.PlayerName} {id.Index}",
-            _ => "Invalid",
+                ? $"알 수 없는 대상의 {id.Index}"
+                : $"{id.PlayerName}의 {id.Index}",
+            _ => "잘못된 대상",
         };
     }
 
@@ -131,8 +131,8 @@ public sealed class ActorManager : ActorIdentifierFactory, IDisposable, IAsyncSe
             IdentifierType.Owned     => $"{id.PlayerName}의 {Data.ToName(id.Kind, id.DataId)}",
             IdentifierType.Special   => ((ScreenActor)id.Index.Index).ToName(),
             IdentifierType.Npc       => Data.ToName(id.Kind, id.DataId),
-            IdentifierType.UnkObject => id.PlayerName.IsEmpty ? id.PlayerName.ToString() : "Unknown Object",
-            _                        => "Invalid",
+            IdentifierType.UnkObject => id.PlayerName.IsEmpty ? id.PlayerName.ToString() : "알 수 없는 대상",
+            _                        => "잘못된 대상",
         };
     }
 }
