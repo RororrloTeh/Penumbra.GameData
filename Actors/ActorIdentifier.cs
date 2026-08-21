@@ -103,43 +103,52 @@ public readonly struct ActorIdentifier : IEquatable<ActorIdentifier>
 
     /// <summary> Obtain an incognito name from an identifier, meaning that player names are reduced to initials. </summary>
     /// <param name="name"> If the full string was already constructed, use this instead of calling ToString again. </param>
+    /// <remarks>
+    /// The player name is located inside the constructed string and replaced in place, so every piece of
+    /// surrounding decoration (world name, retainer type, owned object suffix) is kept exactly as it was.
+    /// This does not assume that a character name consists of two space separated tokens, which is not true
+    /// on the Korean client, where character names are a single token and previously produced "ERROR (name)".
+    /// </remarks>
     public string Incognito(string? name)
     {
         name ??= ToString();
         switch (Type)
         {
             case IdentifierType.Player:
-            {
-                var parts = name.Split(' ', 3);
-                return parts.Length switch
-                {
-                    2 => $"{parts[0][0]}. {parts[1][0]}.",
-                    3 => $"{parts[0][0]}. {parts[1][0]}. {parts[2]}",
-                    _ => $"ERROR ({name})",
-                };
-            }
             case IdentifierType.Owned:
-            {
-                var parts = name.Split(' ', 3);
-                return parts.Length switch
-                {
-                    3 when parts[2][0] is '(' => $"{parts[0][0]}. {parts[1][0]}. {parts[2]}",
-                    3                         => $"{parts[0][0]}. {parts[1][0]}.'s {parts[2]}",
-                    _                         => $"ERROR ({name})",
-                };
-            }
             case IdentifierType.Retainer:
             {
-                var parts = name.Split(' ', 2);
-                return parts.Length switch
-                {
-                    2 => $"{parts[0][0]}. {parts[1]}",
-                    _ => $"ERROR ({name})",
-                };
+                if (PlayerName.IsEmpty)
+                    return name;
+
+                var playerName = PlayerName.ToString();
+                if (playerName.Length == 0)
+                    return name;
+
+                var initials = Initials(playerName);
+                var index    = name.IndexOf(playerName, StringComparison.Ordinal);
+
+                // If the full name is not contained in the constructed string for whatever reason,
+                // fall back to the initials only instead of leaking the un-incognito string.
+                return index < 0
+                    ? initials
+                    : string.Concat(name.AsSpan(0, index), initials, name.AsSpan(index + playerName.Length));
             }
         }
 
         return name;
+    }
+
+    /// <summary> Reduce a character name to its initials, e.g. "Firstname Lastname" to "F. L." or a single token name to its first character. </summary>
+    private static string Initials(string playerName)
+    {
+        var parts = playerName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            0 => string.Empty,
+            1 => $"{parts[0][0]}.",
+            _ => string.Join(' ', parts.Select(p => $"{p[0]}.")),
+        };
     }
 
     /// <summary> Convert an identifier to a human-readable string. </summary>
