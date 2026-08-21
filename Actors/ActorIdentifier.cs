@@ -161,26 +161,26 @@ public readonly struct ActorIdentifier : IEquatable<ActorIdentifier>
                 IdentifierType.Retainer =>
                     $"{PlayerName}{Retainer switch
                     {
-                        RetainerType.Bell      => " (Bell)",
-                        RetainerType.Mannequin => " (Mannequin)",
-                        _                      => " (Retainer)",
+                        RetainerType.Bell      => " (집사 초인종)",
+                        RetainerType.Mannequin => " (마네킹)",
+                        _                      => " (집사)",
                     }}",
-                IdentifierType.Owned   => $"{PlayerName}s {Kind.ToName()} {DataId} ({HomeWorld})",
+                IdentifierType.Owned   => $"{PlayerName}의 {Kind.ToName()} {DataId} ({HomeWorld})",
                 IdentifierType.Special => ((ScreenActor)Index.Index).ToName(),
                 IdentifierType.Npc =>
                     Index == ushort.MaxValue
                         ? $"{Kind.ToName()} #{DataId}"
-                        : $"{Kind.ToName()} #{DataId} at {Index}",
+                        : $"{Kind.ToName()} #{DataId}의 {Index}",
                 IdentifierType.UnkObject => PlayerName.IsEmpty
-                    ? $"Unknown Object at {Index}"
-                    : $"{PlayerName} at {Index}",
-                _ => "Invalid",
+                    ? $"알 수 없는 대상의 {Index}"
+                    : $"{PlayerName}의 {Index}",
+                _ => "잘못된 대상",
             };
 
     /// <summary> Obtain only the name of the actor identified. </summary>
     /// <remarks> This uses the statically set actor manager if it is available to obtain the name. </remarks>
     public string ToName()
-        => ActorIdentifierExtensions.Manager?.ToName(this) ?? "Unknown Object";
+        => ActorIdentifierExtensions.Manager?.ToName(this) ?? "알 수 없는 대상";
 
     /// <inheritdoc/>
     public override int GetHashCode()
